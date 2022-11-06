@@ -1,7 +1,11 @@
 package br.com.alura.forum.security;
 
+import br.com.alura.forum.modelo.Usuario;
+import br.com.alura.forum.repository.UsuarioRepository;
 import br.com.alura.forum.validacao.TokenService;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
@@ -14,9 +18,12 @@ import java.io.IOException;
 public class AuthenticationViaTokenFilter extends OncePerRequestFilter {
 
     private TokenService tokenService;
+    private UsuarioRepository repository;
 
-    public AuthenticationViaTokenFilter(TokenService tokenService) {
+
+    public AuthenticationViaTokenFilter(TokenService tokenService,UsuarioRepository repository) {
         this.tokenService = tokenService;
+        this.repository = repository;
     }
 
     @Override
@@ -25,14 +32,25 @@ public class AuthenticationViaTokenFilter extends OncePerRequestFilter {
 
         String token = recuperarToken(request);
         boolean valido = tokenService.isTokenValido(token);
-        System.out.println(valido);
+        if (valido){
+            autenticaCliente(token);
+        }else{
 
+        }
         filterChain.doFilter(request,response);
     }
 
+    private void autenticaCliente(String token) {
+        Long idUsuario = tokenService.getIdUsuario(token);
+        Usuario usuario = repository.findById(idUsuario).get();
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(usuario,
+                null,usuario.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
     private String recuperarToken(HttpServletRequest request) {
-        String token =  request.getHeader("Authorization");
-        if (token == null || token.isEmpty() || token.startsWith("Bearer ")){
+        String token = request.getHeader("Authorization");
+        if (token == null || token.isEmpty() || !token.startsWith("Bearer ")){
             return null;
         }
         return token.substring(7,token.length());

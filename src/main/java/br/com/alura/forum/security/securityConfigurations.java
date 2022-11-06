@@ -1,6 +1,8 @@
 package br.com.alura.forum.security;
 
 
+import br.com.alura.forum.controller.AutenticacaoController;
+import br.com.alura.forum.repository.UsuarioRepository;
 import br.com.alura.forum.validacao.TokenService;
 import ch.qos.logback.core.net.SyslogOutputStream;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,36 +29,39 @@ public class securityConfigurations extends WebSecurityConfigurerAdapter {
     @Autowired
     private TokenService tokenService;
 
-    @Bean
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
     @Override
+    @Bean
     protected AuthenticationManager authenticationManager() throws Exception {
         return super.authenticationManager();
     }
 
-    //configuracoes de autenticacao
+    //Configuracoes de autenticacao
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.userDetailsService(autenticacaoService).passwordEncoder(new BCryptPasswordEncoder());
     }
 
-    //configuracoes de recursos estaticos(js,css,imagens,etc..)
-    @Override
-    public void configure(WebSecurity web) throws Exception {
-
-    }
-
-    //configuracoes de autorizacao
+    //Configuracoes de autorizacao
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
                 .antMatchers(HttpMethod.GET, "/topicos").permitAll()
                 .antMatchers(HttpMethod.GET, "/topicos/*").permitAll()
                 .antMatchers(HttpMethod.POST, "/auth").permitAll()
+                .antMatchers(HttpMethod.GET, "/actuator/**").permitAll()
                 .anyRequest().authenticated()
                 .and().csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and().addFilterBefore(new AuthenticationViaTokenFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
+                .and().addFilterBefore(new AuthenticationViaTokenFilter(tokenService, usuarioRepository), UsernamePasswordAuthenticationFilter.class);
     }
 
+
+    //Configuracoes de recursos estaticos(js, css, imagens, etc.)
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+    }
 
 }
